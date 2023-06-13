@@ -3,7 +3,7 @@
 
 use core::ops::{Deref, DerefMut, Index, IndexMut};
 
-pub use bin_utils::*;
+use bin_utils::*;
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 /// A MAC address.
