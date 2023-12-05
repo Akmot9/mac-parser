@@ -3,7 +3,7 @@
 
 use core::ops::{Deref, DerefMut, Index, IndexMut};
 
-use bin_utils::*;
+use scroll::{ctx::{TryFromCtx, TryIntoCtx, SizeWith}, Pread, Pwrite};
 
 /// The broadcast address.
 pub const BROADCAST: MACAddress = MACAddress::new([0xff; 6]);
@@ -11,7 +11,7 @@ pub const BROADCAST: MACAddress = MACAddress::new([0xff; 6]);
 pub const ZERO: MACAddress = MACAddress::new([0x00; 6]);
 
 #[repr(C)]
-#[derive(Clone, Copy, Default, PartialEq, Eq, PartialOrd, Ord)]
+#[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 /// A MAC address.
 pub struct MACAddress(pub [u8; 6]);
 impl MACAddress {
@@ -37,14 +37,21 @@ impl From<MACAddress> for [u8; 6] {
         *value.deref()
     }
 }
-impl ReadFixed<6> for MACAddress {
-    fn from_bytes(data: &[u8; 6]) -> Result<Self, ParserError> {
-        Ok(Self(*data))
+impl SizeWith for MACAddress {
+    fn size_with(_ctx: &()) -> usize {
+        6
     }
 }
-impl WriteFixed<6> for MACAddress {
-    fn to_bytes(&self) -> [u8; 6] {
-        *self.deref()
+impl TryFromCtx<'_> for MACAddress {
+    type Error = scroll::Error;
+    fn try_from_ctx(from: &'_ [u8], _ctx: ()) -> Result<(Self, usize), Self::Error> {
+        Ok((MACAddress::new(from.pread(0)?), 6))
+    }
+}
+impl TryIntoCtx for MACAddress {
+    type Error = scroll::Error;
+    fn try_into_ctx(self, buf: &mut [u8], _ctx: ()) -> Result<usize, Self::Error> {
+        buf.pwrite(self.0.as_slice(), 0)
     }
 }
 impl Deref for MACAddress {
@@ -69,7 +76,6 @@ impl IndexMut<usize> for MACAddress {
         &mut self.0[index]
     }
 }
-#[cfg(feature = "debug")]
 impl core::fmt::Debug for MACAddress {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         <Self as core::fmt::Display>::fmt(&self, f)
@@ -78,7 +84,7 @@ impl core::fmt::Debug for MACAddress {
 impl core::fmt::Display for MACAddress {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!(
-            "{:2x}:{:2x}:{:2x}:{:2x}:{:2x}:{:2x}",
+            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
             self[0], self[1], self[2], self[3], self[4], self[5]
         ))
     }
