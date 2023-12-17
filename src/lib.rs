@@ -1,5 +1,4 @@
 #![no_std]
-#![feature(iter_next_chunk)]
 
 use core::ops::{Deref, DerefMut, Index, IndexMut};
 
