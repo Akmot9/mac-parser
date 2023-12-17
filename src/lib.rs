@@ -10,7 +10,7 @@ pub const BROADCAST: MACAddress = MACAddress::new([0xff; 6]);
 /// An empty address.
 pub const ZERO: MACAddress = MACAddress::new([0x00; 6]);
 
-#[repr(C)]
+#[repr(transparent)]
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
 /// A MAC address.
 pub struct MACAddress(pub [u8; 6]);
@@ -51,7 +51,7 @@ impl TryFromCtx<'_> for MACAddress {
 impl TryIntoCtx for MACAddress {
     type Error = scroll::Error;
     fn try_into_ctx(self, buf: &mut [u8], _ctx: ()) -> Result<usize, Self::Error> {
-        buf.pwrite(self.0.as_slice(), 0)
+        buf.pwrite(self.0, 0)
     }
 }
 impl Deref for MACAddress {

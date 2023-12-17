@@ -9,7 +9,7 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 
 [dependencies]
-scroll = { git = "https://github.com/Frostie314159/scroll.git", branch = "fixed-array-impl", default-features = false, features = ["derive"] }
+scroll = { git = "https://github.com/Frostie314159/scroll.git", branch = "fixed-array-impl", default-features = false }
 
 [features]
 debug = []
