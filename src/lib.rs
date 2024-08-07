@@ -43,14 +43,16 @@ impl SizeWith for MACAddress {
 }
 impl TryFromCtx<'_> for MACAddress {
     type Error = scroll::Error;
+    #[inline]
     fn try_from_ctx(from: &'_ [u8], _ctx: ()) -> Result<(Self, usize), Self::Error> {
         Ok((MACAddress::new(from.pread(0)?), 6))
     }
 }
 impl TryIntoCtx for MACAddress {
     type Error = scroll::Error;
+    #[inline]
     fn try_into_ctx(self, buf: &mut [u8], _ctx: ()) -> Result<usize, Self::Error> {
-        buf.pwrite(self.0, 0)
+        buf.pwrite(self.as_slice(), 0)
     }
 }
 impl Deref for MACAddress {
