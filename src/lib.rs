@@ -1,8 +1,14 @@
 #![no_std]
 
-use core::ops::{Deref, DerefMut, Index, IndexMut};
+use core::{
+    fmt::{Debug, Display},
+    ops::{Deref, DerefMut, Index, IndexMut},
+};
 
-use scroll::{ctx::{TryFromCtx, TryIntoCtx, SizeWith}, Pread, Pwrite};
+use scroll::{
+    ctx::{SizeWith, TryFromCtx, TryIntoCtx},
+    Pread, Pwrite,
+};
 
 /// The broadcast address.
 pub const BROADCAST: MACAddress = MACAddress::new([0xff; 6]);
@@ -77,16 +83,31 @@ impl IndexMut<usize> for MACAddress {
         &mut self.0[index]
     }
 }
-impl core::fmt::Debug for MACAddress {
+impl Debug for MACAddress {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         <Self as core::fmt::Display>::fmt(&self, f)
     }
 }
-impl core::fmt::Display for MACAddress {
+impl Display for MACAddress {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.write_fmt(format_args!(
             "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
             self[0], self[1], self[2], self[3], self[4], self[5]
         ))
+    }
+}
+#[cfg(feature = "defmt")]
+impl defmt::Format for MACAddress {
+    fn format(&self, fmt: defmt::Formatter) {
+        defmt::write!(
+            fmt,
+            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
+            self[0],
+            self[1],
+            self[2],
+            self[3],
+            self[4],
+            self[5]
+        )
     }
 }
