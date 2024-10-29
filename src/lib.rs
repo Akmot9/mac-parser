@@ -1,113 +1,69 @@
-#![no_std]
+use core::fmt::{Debug, Display, Formatter};
+use core::convert::TryFrom;
+use thiserror::Error;
 
-use core::{
-    fmt::{Debug, Display},
-    ops::{Deref, DerefMut, Index, IndexMut},
-};
+/// Erreurs de parsing pour les adresses MAC
+#[derive(Error, Debug, PartialEq, Eq, Clone, Copy)]
+pub enum MacParseError {
+    #[error("Invalid MAC address length: expected {expected} bytes, but got {actual} bytes")]
+    InvalidLength { expected: usize, actual: usize },
+}
 
-use scroll::{
-    ctx::{SizeWith, TryFromCtx, TryIntoCtx},
-    Pread, Pwrite,
-};
-
-/// The broadcast address.
-pub const BROADCAST: MACAddress = MACAddress::new([0xff; 6]);
-/// An empty address.
-pub const ZERO: MACAddress = MACAddress::new([0x00; 6]);
-
+/// Adresse MAC EUI-48 (6 octets)
 #[repr(transparent)]
 #[derive(Clone, Copy, Default, PartialEq, Eq, Hash)]
-/// A MAC address.
-pub struct MACAddress(pub [u8; 6]);
-impl MACAddress {
-    /// Checks the unicast/multicast bit of the first octet.
+pub struct MacAddress([u8; 6]);
+
+impl MacAddress {
+    /// Constante d'adresse broadcast
+    pub const fn broadcast() -> Self {
+        Self([0xff; 6])
+    }
+
+    /// Constante d'adresse zéro
+    pub const fn zero() -> Self {
+        Self([0x00; 6])
+    }
+
+    /// Vérifie si c'est une adresse multicast
     pub const fn is_multicast(&self) -> bool {
-        self.0[0] & 0x1 != 0x0
+        self.0[0] & 0x1 != 0
     }
-    /// Checks the global/local bit of the first octet.
+
+    /// Vérifie si c'est une adresse locale
     pub const fn is_local(&self) -> bool {
-        self.0[0] & 0x2 != 0x0
+        self.0[0] & 0x2 != 0
     }
-    pub const fn new(address: [u8; 6]) -> Self {
-        Self(address)
-    }
-}
-impl From<[u8; 6]> for MACAddress {
-    fn from(value: [u8; 6]) -> Self {
-        Self(value)
-    }
-}
-impl From<MACAddress> for [u8; 6] {
-    fn from(value: MACAddress) -> Self {
-        *value.deref()
-    }
-}
-impl SizeWith for MACAddress {
-    fn size_with(_ctx: &()) -> usize {
-        6
-    }
-}
-impl TryFromCtx<'_> for MACAddress {
-    type Error = scroll::Error;
-    #[inline]
-    fn try_from_ctx(from: &'_ [u8], _ctx: ()) -> Result<(Self, usize), Self::Error> {
-        Ok((MACAddress::new(from.pread(0)?), 6))
-    }
-}
-impl TryIntoCtx for MACAddress {
-    type Error = scroll::Error;
-    #[inline]
-    fn try_into_ctx(self, buf: &mut [u8], _ctx: ()) -> Result<usize, Self::Error> {
-        buf.pwrite(self.as_slice(), 0)
-    }
-}
-impl Deref for MACAddress {
-    type Target = [u8; 6];
-    fn deref(&self) -> &Self::Target {
+
+    /// Retourne un slice immuable
+    pub fn as_bytes(&self) -> &[u8] {
         &self.0
     }
 }
-impl DerefMut for MACAddress {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+
+impl TryFrom<&[u8]> for MacAddress {
+    type Error = MacParseError;
+
+    fn try_from(bytes: &[u8]) -> Result<Self, Self::Error> {
+        if bytes.len() != 6 {
+            return Err(MacParseError::InvalidLength { expected: 6, actual: bytes.len() });
+        }
+        let mut addr = [0u8; 6];
+        addr.copy_from_slice(bytes);
+        Ok(Self(addr))
     }
 }
-impl Index<usize> for MACAddress {
-    type Output = u8;
-    fn index(&self, index: usize) -> &Self::Output {
-        &self.0[index]
+
+impl Display for MacAddress {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}", 
+               self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5])
     }
 }
-impl IndexMut<usize> for MACAddress {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        &mut self.0[index]
-    }
-}
-impl Debug for MACAddress {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        <Self as core::fmt::Display>::fmt(&self, f)
-    }
-}
-impl Display for MACAddress {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        f.write_fmt(format_args!(
-            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-            self[0], self[1], self[2], self[3], self[4], self[5]
-        ))
-    }
-}
-#[cfg(feature = "defmt")]
-impl defmt::Format for MACAddress {
-    fn format(&self, fmt: defmt::Formatter) {
-        defmt::write!(
-            fmt,
-            "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",
-            self[0],
-            self[1],
-            self[2],
-            self[3],
-            self[4],
-            self[5]
-        )
+
+impl Debug for MacAddress {
+    fn fmt(&self, f: &mut Formatter<'_>) -> core::fmt::Result {
+        write!(f, "MacAddress({:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x})",
+               self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5])
     }
 }
